@@ -1,0 +1,4 @@
+sanic==19.9
+sanic-cors>=0.9.9
+simplejson
+aiohttp
