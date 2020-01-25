@@ -126,13 +126,13 @@ def unzip(config, url, filepath):
     with open(join(extract_dir, 'info.dat')) as f:
         info = json.load(f)
 
-    song_name = info['_songSubName']
+    song_name = info['_songName']
     song_id = url.split('/')[-2]
-    new_folder_name = f'{song_id} {song_name}'
+    new_folder_name = f'{song_id} ({song_name.strip()})'
 
     move_path = join(config['CUSTOM_LEVELS_DIR'], new_folder_name)
     if os.path.exists(move_path):
         return new_folder_name
 
-    shutil.move(extract_dir, join(config['CUSTOM_LEVELS_DIR'], new_folder_name))
+    shutil.move(extract_dir, move_path)
     return new_folder_name
