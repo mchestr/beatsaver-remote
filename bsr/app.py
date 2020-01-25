@@ -19,16 +19,15 @@ try:
 except IOError:
     pass
 
-BEATSABER_DIR = r'E:\SteamLibrary\steamapps\common\Beat Saber'
-CUSTOM_LEVELS_DIR = join(BEATSABER_DIR, 'Beat Saber_Data', 'CustomLevels')
 blueprint = Blueprint('api')
 
 
-def new(config=None):
+def new(beatsaber_directory):
     app = Sanic()
     app.blueprint(blueprint)
     app.add_websocket_route(websocket, '/ws')
     CORS(app)
+    app.config.CUSTOM_LEVELS_DIR = join(beatsaber_directory, 'Beat Saber_Data', 'CustomLevels')
     return app
 
 
@@ -73,23 +72,23 @@ async def notify_link_name(ws, id_, name):
 
 
 @remove_on_failure
-async def handle_websocket(ws):
+async def handle_websocket(config, ws):
     await ws.send(json.dumps({'type': 'links', 'links': list(LINKS_SUBMITTED.values())}))
     while True:
         data = json.loads(await ws.recv())
         if data['type'] == 'link-submit':
             LINKS_SUBMITTED[data['id']] = data
             await asyncio.gather(*[notify_link_submit(socket, data) for socket in CURRENT_WEBSOCKETS if socket != ws])
-            asyncio.create_task(download(data))
+            asyncio.create_task(download(config, data))
 
 
 async def websocket(request, ws):
     print('opened websocket')
     CURRENT_WEBSOCKETS.append(ws)
-    await handle_websocket(ws)
+    await handle_websocket(request.app.config, ws)
 
 
-async def download(data):
+async def download(config, data):
     try:
         url = urlparse(data['value']).geturl()
         if not data['value'].endswith('.zip'):
@@ -106,7 +105,7 @@ async def download(data):
                         if not chunk:
                             break
                         f.write(chunk)
-        name = unzip(url, filepath)
+        name = unzip(config, url, filepath)
         await asyncio.gather(*[notify_link_name(ws, data['id'], name) for ws in CURRENT_WEBSOCKETS])
     except Exception as exc:
         print(f'Exception:', exc)
@@ -116,7 +115,7 @@ async def download(data):
     await asyncio.gather(*[notify_link_state(ws, data['id'], 'complete') for ws in CURRENT_WEBSOCKETS])
 
 
-def unzip(url, filepath):
+def unzip(config, url, filepath):
     try:
         with zipfile.ZipFile(filepath, 'r') as zip:
             extract_dir = filepath[:-4]
@@ -131,5 +130,9 @@ def unzip(url, filepath):
     song_id = url.split('/')[-2]
     new_folder_name = f'{song_id} {song_name}'
 
-    shutil.move(extract_dir, join(CUSTOM_LEVELS_DIR, new_folder_name))
+    move_path = join(config['CUSTOM_LEVELS_DIR'], new_folder_name)
+    if os.path.exists(move_path):
+        return new_folder_name
+
+    shutil.move(extract_dir, join(config['CUSTOM_LEVELS_DIR'], new_folder_name))
     return new_folder_name
