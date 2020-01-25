@@ -9,8 +9,9 @@ find songs they want to play and submit links which will automatically be downlo
 _Requires Python3.6+_
 
 1. Run `npm run build` in the `./web` directory
-2. Run `python -m venv venv && venv\Scripts\pip.exe install . && venv\Scripts\python.exe -m bsr run`
-3. Visit `http://localhost:8000`
+2. Run `python -m venv venv && venv\Scripts\pip.exe install .`
+3. Run the server ` venv\Scripts\python.exe -m bsr run "<path to beatsaber installation>"`
+4. Visit `http://localhost:8000`
 
 ## Usage
 
